@@ -78,7 +78,7 @@ class OrphanSceneProcessor:
             images = self.stash.find_images(
                 f=query,
                 filter={"per_page": -1},
-                fragment='id title paths { path } galleries { id title folder { path } }'
+                fragment='id title visual_files { ... on ImageFile { path } } galleries { id title folder { path } }'
             )
 
             if not images:
@@ -87,10 +87,11 @@ class OrphanSceneProcessor:
             # Filter to only images actually in this specific folder (not subfolders)
             folder_images = []
             for image in images:
-                # Images have a paths array, get the first path
-                paths = image.get('paths', [])
-                if paths and len(paths) > 0:
-                    image_path = paths[0].get('path', '')
+                # Images have visual_files array (union of VideoFile | ImageFile)
+                visual_files = image.get('visual_files', [])
+                if visual_files and len(visual_files) > 0:
+                    # Get path from the first file
+                    image_path = visual_files[0].get('path', '')
                     if image_path:
                         image_folder = str(Path(image_path).parent)
                         if image_folder == folder_path:
@@ -115,7 +116,7 @@ class OrphanSceneProcessor:
             images = self.stash.find_images(
                 f=query,
                 filter={"per_page": -1},
-                fragment='id title paths { path } galleries { id title folder { path } }'
+                fragment='id title visual_files { ... on ImageFile { path } } galleries { id title folder { path } }'
             )
 
             if not images:
@@ -124,10 +125,11 @@ class OrphanSceneProcessor:
             # Group images by their folder path, excluding the original folder
             folder_images = {}
             for image in images:
-                # Images have a paths array, get the first path
-                paths = image.get('paths', [])
-                if paths and len(paths) > 0:
-                    image_path = paths[0].get('path', '')
+                # Images have visual_files array (union of VideoFile | ImageFile)
+                visual_files = image.get('visual_files', [])
+                if visual_files and len(visual_files) > 0:
+                    # Get path from the first file
+                    image_path = visual_files[0].get('path', '')
                     if not image_path:
                         continue
 
