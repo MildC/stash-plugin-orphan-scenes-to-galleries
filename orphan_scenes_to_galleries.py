@@ -78,7 +78,7 @@ class OrphanSceneProcessor:
             images = self.stash.find_images(
                 f=query,
                 filter={"per_page": -1},
-                fragment='id title path galleries { id title folder { path } }'
+                fragment='id title paths { path } galleries { id title folder { path } }'
             )
 
             if not images:
@@ -87,11 +87,14 @@ class OrphanSceneProcessor:
             # Filter to only images actually in this specific folder (not subfolders)
             folder_images = []
             for image in images:
-                image_path = image.get('path', '')
-                if image_path:
-                    image_folder = str(Path(image_path).parent)
-                    if image_folder == folder_path:
-                        folder_images.append(image)
+                # Images have a paths array, get the first path
+                paths = image.get('paths', [])
+                if paths and len(paths) > 0:
+                    image_path = paths[0].get('path', '')
+                    if image_path:
+                        image_folder = str(Path(image_path).parent)
+                        if image_folder == folder_path:
+                            folder_images.append(image)
 
             return folder_images
         except Exception as e:
@@ -112,7 +115,7 @@ class OrphanSceneProcessor:
             images = self.stash.find_images(
                 f=query,
                 filter={"per_page": -1},
-                fragment='id title path galleries { id title folder { path } }'
+                fragment='id title paths { path } galleries { id title folder { path } }'
             )
 
             if not images:
@@ -121,19 +124,22 @@ class OrphanSceneProcessor:
             # Group images by their folder path, excluding the original folder
             folder_images = {}
             for image in images:
-                image_path = image.get('path', '')
-                if not image_path:
-                    continue
+                # Images have a paths array, get the first path
+                paths = image.get('paths', [])
+                if paths and len(paths) > 0:
+                    image_path = paths[0].get('path', '')
+                    if not image_path:
+                        continue
 
-                image_folder = str(Path(image_path).parent)
+                    image_folder = str(Path(image_path).parent)
 
-                # Skip the original folder
-                if image_folder == exclude_path:
-                    continue
+                    # Skip the original folder
+                    if image_folder == exclude_path:
+                        continue
 
-                if image_folder not in folder_images:
-                    folder_images[image_folder] = []
-                folder_images[image_folder].append(image)
+                    if image_folder not in folder_images:
+                        folder_images[image_folder] = []
+                    folder_images[image_folder].append(image)
 
             return folder_images
         except Exception as e:
