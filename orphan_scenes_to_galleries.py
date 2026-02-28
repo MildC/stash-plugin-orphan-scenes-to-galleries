@@ -6,6 +6,9 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
+# Import the matching logic
+from matching_logic import should_match_folder
+
 
 class OrphanSceneProcessor:
     def __init__(self, stash: StashInterface, settings: Dict):
@@ -173,19 +176,9 @@ class OrphanSceneProcessor:
 
                     image_folder = str(Path(image_path).parent)
 
-                    # Skip the scene's own folder (already checked in step 1)
-                    if image_folder == scene_folder:
-                        continue
-
-                    # Allow two types of folders:
-                    # 1. Child folders: descendants of scene_folder (e.g., /scene/pics/)
-                    # 2. Direct parent: the immediate parent folder (e.g., /parent/ when scene is in /parent/video/)
-                    is_child = image_folder.startswith(scene_folder + os.sep)
-                    is_direct_parent = image_folder == parent_path
-
-                    if not (is_child or is_direct_parent):
+                    # Use the extracted matching logic function
+                    if not should_match_folder(image_folder, scene_folder, parent_path):
                         # Skip siblings and other unrelated folders
-                        # Example: Skip /parent/march/ when scene is in /parent/april/
                         continue
 
                     if image_folder not in folder_images:

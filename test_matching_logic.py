@@ -2,10 +2,16 @@
 """
 Test suite for folder hierarchy matching logic
 Tests all 4 examples from README.md
+Uses the extracted should_match_folder() function for unit testing
 """
 
 import os
+import sys
 from pathlib import Path
+
+# Import the matching function from the standalone module
+sys.path.insert(0, os.path.dirname(__file__))
+from matching_logic import should_match_folder
 
 
 def test_example_1_same_folder():
@@ -21,6 +27,7 @@ def test_example_1_same_folder():
 
     scene_path = "/media/photoshoots/2024-03-15/video.mp4"
     scene_folder = str(Path(scene_path).parent)
+    parent_path = str(Path(scene_folder).parent)
 
     image_paths = [
         "/media/photoshoots/2024-03-15/image1.jpg",
@@ -28,12 +35,13 @@ def test_example_1_same_folder():
     ]
 
     print(f"Scene folder: {scene_folder}")
+    print(f"Parent path: {parent_path}")
     print(f"Image paths: {image_paths}")
 
     # Test: Images in same folder
     for img_path in image_paths:
         img_folder = str(Path(img_path).parent)
-        matches = img_folder == scene_folder
+        matches = should_match_folder(img_folder, scene_folder, parent_path)
         print(f"  {Path(img_path).name}: folder={img_folder}, matches={matches}")
         assert matches, "Should match images in same folder"
 
@@ -66,21 +74,10 @@ def test_example_2_direct_parent():
 
     for img_path in image_paths:
         img_folder = str(Path(img_path).parent)
+        matches = should_match_folder(img_folder, scene_folder, parent_path)
 
-        # Check if it's a child folder
-        is_child = img_folder.startswith(scene_folder + os.sep)
-        # Check if it's the direct parent
-        is_direct_parent = img_folder == parent_path
-        # Should match if either condition is true
-        should_match = is_child or is_direct_parent
-
-        print(f"  {Path(img_path).name}:")
-        print(f"    folder={img_folder}")
-        print(f"    is_child={is_child}, is_direct_parent={is_direct_parent}")
-        print(f"    should_match={should_match}")
-
-        assert is_direct_parent, "Should match direct parent folder"
-        assert should_match, "Should match via direct parent logic"
+        print(f"  {Path(img_path).name}: folder={img_folder}, matches={matches}")
+        assert matches, "Should match direct parent folder"
 
     print("✓ PASSED: Direct parent folder matching works")
 
@@ -110,21 +107,10 @@ def test_example_3_child_folder():
 
     for img_path in image_paths:
         img_folder = str(Path(img_path).parent)
+        matches = should_match_folder(img_folder, scene_folder, parent_path)
 
-        # Check if it's a child folder
-        is_child = img_folder.startswith(scene_folder + os.sep)
-        # Check if it's the direct parent
-        is_direct_parent = img_folder == parent_path
-        # Should match if either condition is true
-        should_match = is_child or is_direct_parent
-
-        print(f"  {Path(img_path).name}:")
-        print(f"    folder={img_folder}")
-        print(f"    is_child={is_child}, is_direct_parent={is_direct_parent}")
-        print(f"    should_match={should_match}")
-
-        assert is_child, "Should match child folder"
-        assert should_match, "Should match via child folder logic"
+        print(f"  {Path(img_path).name}: folder={img_folder}, matches={matches}")
+        assert matches, "Should match child folder"
 
     print("✓ PASSED: Child folder matching works")
 
@@ -154,22 +140,10 @@ def test_example_4_sibling_prevention():
 
     for img_path in image_paths:
         img_folder = str(Path(img_path).parent)
+        matches = should_match_folder(img_folder, scene_folder, parent_path)
 
-        # Check if it's a child folder
-        is_child = img_folder.startswith(scene_folder + os.sep)
-        # Check if it's the direct parent
-        is_direct_parent = img_folder == parent_path
-        # Should match if either condition is true
-        should_match = is_child or is_direct_parent
-
-        print(f"  {Path(img_path).name}:")
-        print(f"    folder={img_folder}")
-        print(f"    is_child={is_child}, is_direct_parent={is_direct_parent}")
-        print(f"    should_match={should_match}")
-
-        assert not is_child, "Should NOT be a child folder"
-        assert not is_direct_parent, "Should NOT be direct parent"
-        assert not should_match, "Should NOT match sibling folder"
+        print(f"  {Path(img_path).name}: folder={img_folder}, matches={matches}")
+        assert not matches, "Should NOT match sibling folder"
 
     print("✓ PASSED: Sibling folder prevention works")
 
@@ -187,15 +161,11 @@ def test_edge_cases():
     grandparent_path = "/media/studio/2024"
     image_folder = grandparent_path
 
-    is_child = image_folder.startswith(scene_folder + os.sep)
-    is_direct_parent = image_folder == parent_path
-    should_match = is_child or is_direct_parent
-
+    matches = should_match_folder(image_folder, scene_folder, parent_path)
     print(f"  Scene: {scene_folder}")
     print(f"  Image: {image_folder}")
-    print(f"  is_child={is_child}, is_direct_parent={is_direct_parent}")
-    print(f"  should_match={should_match}")
-    assert not should_match, "Should NOT match grandparent folder"
+    print(f"  matches={matches}")
+    assert not matches, "Should NOT match grandparent folder"
     print("  ✓ Grandparent correctly rejected")
 
     # Edge case 2: Deep child folder (should match)
@@ -204,15 +174,11 @@ def test_edge_cases():
     parent_path = "/media/studio"
     image_folder = "/media/studio/session1/subfolder1/subfolder2/pics"
 
-    is_child = image_folder.startswith(scene_folder + os.sep)
-    is_direct_parent = image_folder == parent_path
-    should_match = is_child or is_direct_parent
-
+    matches = should_match_folder(image_folder, scene_folder, parent_path)
     print(f"  Scene: {scene_folder}")
     print(f"  Image: {image_folder}")
-    print(f"  is_child={is_child}, is_direct_parent={is_direct_parent}")
-    print(f"  should_match={should_match}")
-    assert should_match, "Should match deep child folder"
+    print(f"  matches={matches}")
+    assert matches, "Should match deep child folder"
     print("  ✓ Deep child correctly matched")
 
     # Edge case 3: Similar prefix but different folder (should NOT match)
@@ -221,15 +187,11 @@ def test_edge_cases():
     parent_path = "/media"
     image_folder = "/media/session10"  # Similar but not child or parent
 
-    is_child = image_folder.startswith(scene_folder + os.sep)
-    is_direct_parent = image_folder == parent_path
-    should_match = is_child or is_direct_parent
-
+    matches = should_match_folder(image_folder, scene_folder, parent_path)
     print(f"  Scene: {scene_folder}")
     print(f"  Image: {image_folder}")
-    print(f"  is_child={is_child}, is_direct_parent={is_direct_parent}")
-    print(f"  should_match={should_match}")
-    assert not should_match, "Should NOT match similar prefix"
+    print(f"  matches={matches}")
+    assert not matches, "Should NOT match similar prefix"
     print("  ✓ Similar prefix correctly rejected")
 
     print("\n✓ PASSED: All edge cases handled correctly")
