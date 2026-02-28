@@ -1,7 +1,8 @@
 name: Orphan Scenes to Galleries
-description: Assigns orphan scenes (scenes without galleries) to matching galleries using hierarchical folder-based image search.
+description: Automatically assigns scenes without galleries to their matching galleries by searching for images in the same or nearby folders. Uses a two-tier hierarchical search - first checking the scene's folder, then searching sibling and child folders under the same parent directory.
 version: 1.1.0
-url: https://github.com/yourusername/stash-plugin-orphan-scenes-to-galleries
+url: https://github.com/MildC/stash-plugin-orphan-scenes-to-galleries
+author: MildC
 exec:
   - python
   - "{pluginDir}/orphan_scenes_to_galleries.py"
@@ -10,15 +11,15 @@ interface: raw
 settings:
   excludeOrganized:
     displayName: Exclude Organized Scenes
-    description: Do not process scenes that are marked as organized
+    description: Skip scenes that are marked as organized when looking for orphan scenes to process
     type: BOOLEAN
   dryRun:
-    displayName: Dry Run
-    description: Enable to run in dry run mode. No changes will be made, only logging will occur.
+    displayName: Dry Run Mode
+    description: Test mode - shows what would be assigned without making any actual changes. Always enable this first to preview results!
     type: BOOLEAN
 
 tasks:
   - name: "Assign Orphan Scenes to Galleries"
-    description: Loops through all orphan scenes and attempts to assign them to matching galleries by searching for images in the same or nearby folders.
+    description: Finds all scenes without galleries and automatically assigns them by matching with images in the same or related folders. First searches the scene's folder for images, then expands to sibling/child folders if needed. Uses the gallery of the first matching image found.
     defaultArgs:
       mode: processAll
