@@ -11,7 +11,7 @@ from pathlib import Path
 
 # Import the matching function from the standalone module
 sys.path.insert(0, os.path.dirname(__file__))
-from matching_logic import should_match_folder
+from gallery_matcher import should_match_folder
 
 
 def test_example_1_same_folder():

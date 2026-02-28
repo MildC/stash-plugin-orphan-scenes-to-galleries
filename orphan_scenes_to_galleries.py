@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 # Import the matching logic
-from matching_logic import should_match_folder
+from gallery_matcher import should_match_folder
 
 
 class OrphanSceneProcessor:
