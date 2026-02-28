@@ -1,0 +1,11 @@
+# Files to ignore when loading Stash plugins
+.github/
+.git/
+*.md
+*.pyc
+__pycache__/
+test_input.json
+validate_logic.py
+validate.py
+.gitignore
+.stashignore
