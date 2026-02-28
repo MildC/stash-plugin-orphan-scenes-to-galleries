@@ -2,9 +2,9 @@ import stashapi.log as log
 from stashapi.stashapp import StashInterface
 import sys
 import json
+import os
 from pathlib import Path
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 
 
 class OrphanSceneProcessor:
@@ -134,8 +134,14 @@ class OrphanSceneProcessor:
             log.debug(f"Error finding images in folder {folder_path}: {str(e)}")
             return []
 
-    def get_images_in_parent_folders(self, parent_path: str, exclude_path: str) -> Dict[str, List[Dict]]:
-        """Find all images in folders that start with parent_path prefix, excluding the original path."""
+    def get_images_in_parent_folders(self, parent_path: str, scene_folder: str) -> Dict[str, List[Dict]]:
+        """
+        Find images in:
+        1. Child/subfolders of scene_folder (e.g., /scene/pics/)
+        2. Direct parent folder only (e.g., /parent/ when scene is in /parent/video/)
+
+        Does NOT match sibling folders at the same level.
+        """
         # Query for images where path starts with parent_path
         query = {
             "path": {
@@ -154,7 +160,7 @@ class OrphanSceneProcessor:
             if not images:
                 return {}
 
-            # Group images by their folder path, excluding the original folder
+            # Group images by their folder path
             folder_images = {}
             for image in images:
                 # Images have visual_files array (union of VideoFile | ImageFile)
@@ -167,8 +173,19 @@ class OrphanSceneProcessor:
 
                     image_folder = str(Path(image_path).parent)
 
-                    # Skip the original folder
-                    if image_folder == exclude_path:
+                    # Skip the scene's own folder (already checked in step 1)
+                    if image_folder == scene_folder:
+                        continue
+
+                    # Allow two types of folders:
+                    # 1. Child folders: descendants of scene_folder (e.g., /scene/pics/)
+                    # 2. Direct parent: the immediate parent folder (e.g., /parent/ when scene is in /parent/video/)
+                    is_child = image_folder.startswith(scene_folder + os.sep)
+                    is_direct_parent = image_folder == parent_path
+
+                    if not (is_child or is_direct_parent):
+                        # Skip siblings and other unrelated folders
+                        # Example: Skip /parent/march/ when scene is in /parent/april/
                         continue
 
                     if image_folder not in folder_images:
@@ -177,15 +194,21 @@ class OrphanSceneProcessor:
 
             return folder_images
         except Exception as e:
-            log.debug(f"Error finding images in parent folders: {str(e)}")
+            log.debug(f"Error finding images in related folders: {str(e)}")
             return {}
 
     def match_by_folder_hierarchy(self, scene: Dict) -> Optional[Dict]:
         """
         Match scene to gallery using hierarchical folder-based approach:
         1. Search for images in the same folder as the scene
-        2. If no images found, search in sibling/child folders (parent path prefix)
+        2. If no images found, search in:
+           - Child/subfolders of the scene folder (e.g., /scene/pics/)
+           - Direct parent folder (e.g., /parent/ when scene is in /parent/video/)
         3. Return the gallery of the first image found
+
+        NOTE: Does NOT match sibling folders at the same level.
+        Example: Scene in /media/2024/april/ will NOT match /media/2024/march/ (siblings)
+        But: Scene in /media/session/video/ WILL match /media/session/ (direct parent)
         """
         scene_files = scene.get('files', [])
         if not scene_files:
@@ -223,19 +246,22 @@ class OrphanSceneProcessor:
         else:
             log.debug(f"No images found in same folder: {scene_folder}")
 
-        # Step 2: Search in parent folders (sibling/child folders)
+        # Step 2: Search in related folders:
+        # - Child/subfolders of scene folder (e.g., /scene/pics/)
+        # - Direct parent folder (e.g., /parent/ when scene is in /parent/video/)
+        # Does NOT search sibling folders (e.g., /parent/other/ when scene is in /parent/video/)
         parent_path = str(Path(scene_folder).parent)
 
         if not parent_path or parent_path == scene_folder:
             log.debug(f"No valid parent path for scene {scene['id']}")
             return None
 
-        log.debug(f"Searching for images in folders with parent path prefix: {parent_path}")
+        log.debug(f"Searching for images in child folders and direct parent: {parent_path}")
 
         folder_images = self.get_images_in_parent_folders(parent_path, scene_folder)
 
         if folder_images:
-            log.debug(f"Found images in {len(folder_images)} folders with parent path prefix")
+            log.debug(f"Found images in {len(folder_images)} related folders")
 
             # Sort folders by path for consistent ordering
             for folder_path in sorted(folder_images.keys()):
@@ -261,7 +287,7 @@ class OrphanSceneProcessor:
                 else:
                     log.debug(f"  First image {first_image['id']} in {folder_path} has no galleries")
         else:
-            log.debug(f"No folders found with parent path prefix: {parent_path}")
+            log.debug(f"No related folders with images found for: {scene_folder}")
 
         return None
 

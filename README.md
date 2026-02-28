@@ -105,14 +105,16 @@ This "nearest neighbor" approach assumes that scenes and their related image gal
 
 **Result:** Scene automatically assigned to "March 15 Shoot" gallery ✓
 
-### Example 2: Parent Folder Search
+### Example 2: Direct Parent Folder Search
 
 **Setup:**
-- Scene: `/media/shoots/session1/scene.mp4` (no images in this folder)
-- Images in sibling folder: `/media/shoots/session1-pics/image1.jpg`, `image2.jpg`
+- Scene: `/media/shoots/session1/video/scene.mp4` (no images in this folder)
+- Images in direct parent folder: `/media/shoots/session1/image1.jpg`, `image2.jpg`
 - Gallery: "Session 1 Photos" (contains the images)
 
 **Result:** Scene assigned to "Session 1 Photos" gallery via parent folder search ✓
+
+The plugin searches the direct parent folder, making it easy to organize scenes in subfolders while keeping images at the parent level.
 
 ### Example 3: Multi-Level Hierarchy
 
@@ -122,6 +124,14 @@ This "nearest neighbor" approach assumes that scenes and their related image gal
 - Gallery: "March Gallery" (contains the images)
 
 **Result:** Scene assigned to "March Gallery" via hierarchical search ✓
+
+### Example 4: Multi-Level Hierarchy
+
+**Setup:**
+- Scene: `/media/studio/2024/april/scene.mp4` (no images here)
+- There is no images in related folder. The closest match is in `/media/studio/2024/march/image1.jpg`
+
+**Result:** Scene is left unassigned since no images found in same or related folders ✗
 
 ## Troubleshooting
 
@@ -140,10 +150,10 @@ This "nearest neighbor" approach assumes that scenes and their related image gal
 ### Scenes not being assigned
 
 - Enable **Dry Run** and check the logs to see why matches aren't found
-- Verify that images exist in the same folder or nearby folders as the scene
-- Ensure images are properly assigned to galleries in Stash
-- Check that the scene file path is correct and accessible
-- Review the folder structure - scenes and galleries should be in related folders
+- Try enabling different matching strategies
+- For path matching: ensure scene and gallery paths actually match
+- For performer matching: verify scenes and galleries share performers
+- For date matching: increase the date tolerance
 
 ### Permission errors
 
@@ -205,13 +215,6 @@ MIT License - see LICENSE file for details
 - Inspired by other community plugins in [CommunityScripts](https://github.com/stashapp/CommunityScripts)
 
 ## Changelog
-
-### v1.1.0 (2026-02-27)
-- Replaced multiple matching strategies with hierarchical folder-based matching
-- Same folder search for images
-- Parent folder search for related images
-- More efficient: queries images on-demand instead of loading all galleries
-- Better performance for large libraries
 
 ### v1.0.0 (2026-02-27)
 - Initial release
