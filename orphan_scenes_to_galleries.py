@@ -20,46 +20,46 @@ class OrphanSceneProcessor:
 
     def get_orphan_scenes(self) -> List[Dict]:
         """Find all scenes without galleries."""
-        query = {
-            "galleries_count": {
-                "modifier": "EQUALS",
-                "value": 0
-            }
-        }
+        # Get all scenes and filter for those without galleries
+        log.info("Fetching all scenes to find orphans...")
 
-        # Optionally exclude organized scenes
-        if self.settings.get('excludeOrganized', False):
-            query["organized"] = False
-
-        # Get total count
-        total_count = self.stash.find_scenes(
-            f=query,
-            filter={"page": 0, "per_page": 0},
-            get_count=True
-        )[0]
-
-        log.info(f"Found {total_count} orphan scenes")
-        self.stats['total_orphans'] = total_count
-
-        # Fetch all orphan scenes
-        orphan_scenes = []
+        all_scenes = []
         page = 1
         per_page = 100
 
-        while len(orphan_scenes) < total_count:
-            log.progress(len(orphan_scenes) / total_count)
-
+        while True:
             scenes = self.stash.find_scenes(
-                f=query,
+                f={},  # Empty filter to get all scenes
                 filter={"page": page, "per_page": per_page},
-                fragment='id title date organized files { path } performers { id name }'
+                fragment='id title date organized files { path } galleries { id }'
             )
 
             if not scenes:
                 break
 
-            orphan_scenes.extend(scenes)
+            all_scenes.extend(scenes)
             page += 1
+
+            # Show progress
+            log.progress(page * per_page / 1000)  # Rough progress estimate
+
+        # Filter for scenes without galleries
+        orphan_scenes = []
+        for scene in all_scenes:
+            galleries = scene.get('galleries', [])
+
+            # Skip if scene has galleries
+            if galleries and len(galleries) > 0:
+                continue
+
+            # Skip organized scenes if configured
+            if self.settings.get('excludeOrganized', False) and scene.get('organized', False):
+                continue
+
+            orphan_scenes.append(scene)
+
+        log.info(f"Found {len(orphan_scenes)} orphan scenes out of {len(all_scenes)} total scenes")
+        self.stats['total_orphans'] = len(orphan_scenes)
 
         return orphan_scenes
 
