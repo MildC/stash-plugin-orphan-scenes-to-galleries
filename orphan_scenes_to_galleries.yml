@@ -1,6 +1,6 @@
 name: Orphan Scenes to Galleries
-description: Automatically assigns scenes without galleries to their matching galleries by searching for images in the same or nearby folders. Uses a two-tier hierarchical search - first checking the scene's folder, then searching sibling and child folders under the same parent directory.
-version: 1.1.0
+description: Automatically assigns scenes without galleries to their matching galleries by searching for images in the same or nearby folders. Uses hierarchical search - checking the scene's folder first, then child/subfolders and direct parent folder.
+version: 1.2.0
 url: https://github.com/MildC/stash-plugin-orphan-scenes-to-galleries
 author: MildC
 exec:
@@ -20,6 +20,6 @@ settings:
 
 tasks:
   - name: "Assign Orphan Scenes to Galleries"
-    description: Finds all scenes without galleries and automatically assigns them by matching with images in the same or related folders. First searches the scene's folder for images, then expands to sibling/child folders if needed. Uses the gallery of the first matching image found.
+    description: Finds all scenes without galleries and automatically assigns them by matching with images in related folders. Searches in same folder, child/subfolders, and direct parent folder. Prevents incorrect matches across sibling directories.
     defaultArgs:
       mode: processAll

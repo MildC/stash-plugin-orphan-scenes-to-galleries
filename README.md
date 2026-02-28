@@ -204,7 +204,7 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/stash-plugin-orphan-scenes-to-galleries/issues)
+- **Issues**: [GitHub Issues](https://github.com/MildC/stash-plugin-orphan-scenes-to-galleries/issues)
 - **Stash Community**: [Discourse Forum](https://discourse.stashapp.cc/)
 - **Discord**: [Stash Discord Server](https://discord.gg/2TsNFKt)
 
@@ -216,10 +216,11 @@ MIT License - see LICENSE file for details
 
 ## Changelog
 
-### v1.0.0 (2026-02-27)
-- Initial release
-- Path-based matching
-- Performer-based matching
-- Date-based matching with tolerance
-- Dry run mode
-- Progress tracking and detailed logging
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+
+### Latest Release: v1.2.0 (2026-02-28)
+- Fixed critical GraphQL schema bugs
+- Added sibling folder prevention
+- Improved logging with human-readable identifiers
+- Added comprehensive test suite
+- Support for direct parent folder matching

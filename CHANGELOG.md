@@ -13,7 +13,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Batch processing with configurable batch size
 - Export/import of match rules
 - Duplicate detection and handling
-- Configurable search depth for parent folder hierarchy
+- Configurable search depth for folder hierarchy
+
+## [1.2.0] - 2026-02-28
+
+### Fixed
+- **Critical**: Fixed GraphQL schema bug - now uses `visual_files` instead of incorrect `paths` field
+- **Critical**: Sibling folder prevention - scenes no longer incorrectly match galleries in unrelated sibling directories
+- Fixed query to work with Stash API by fetching all scenes and filtering client-side
+
+### Added
+- Support for direct parent folder matching (scene in `/parent/video/` can match images in `/parent/`)
+- Child/subfolder matching (scene can match images in subfolders)
+- Human-readable logging - shows filenames and folder names instead of empty titles
+- Comprehensive test suite covering all 4 README examples plus edge cases
+- Extracted `gallery_matcher.py` module with testable matching logic
+- Unit tests that run independently without Stash dependencies
+
+### Changed
+- Improved matching algorithm: searches same folder → child folders → direct parent
+- Better logging with file names when titles are missing
+- Updated to Python 3.9+ (removed 3.7, 3.8 from CI)
+- Cleaner error messages and debug output
+
+### Technical Details
+- Matching now uses `should_match_folder()` function with clear rules:
+  - ✓ Same folder
+  - ✓ Child/subfolders (descendants)
+  - ✓ Direct parent only
+  - ✗ Sibling folders (prevented)
+  - ✗ Grandparent folders (prevented)
 
 ## [1.1.0] - 2026-02-27
 
@@ -58,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Detailed logging**: See exactly what the plugin is doing
 - **Statistics**: Summary of orphan scenes, assignments, and skips
 
-[Unreleased]: https://github.com/yourusername/stash-plugin-orphan-scenes-to-galleries/compare/v1.1.0...HEAD
-[1.1.0]: https://github.com/yourusername/stash-plugin-orphan-scenes-to-galleries/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/yourusername/stash-plugin-orphan-scenes-to-galleries/releases/tag/v1.0.0
+[Unreleased]: https://github.com/MildC/stash-plugin-orphan-scenes-to-galleries/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/MildC/stash-plugin-orphan-scenes-to-galleries/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/MildC/stash-plugin-orphan-scenes-to-galleries/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/MildC/stash-plugin-orphan-scenes-to-galleries/releases/tag/v1.0.0
