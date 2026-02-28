@@ -18,6 +18,38 @@ class OrphanSceneProcessor:
             'errors': 0
         }
 
+    def get_scene_identifier(self, scene: Dict) -> str:
+        """Get a human-readable identifier for a scene."""
+        title = scene.get('title', '').strip()
+        if title:
+            return f"'{title}'"
+
+        # Fall back to filename if no title
+        files = scene.get('files', [])
+        if files:
+            file_path = files[0].get('path', '')
+            if file_path:
+                filename = Path(file_path).name
+                return f"file:{filename}"
+
+        return f"ID:{scene['id']}"
+
+    def get_gallery_identifier(self, gallery: Dict) -> str:
+        """Get a human-readable identifier for a gallery."""
+        title = gallery.get('title', '').strip()
+        if title:
+            return f"'{title}'"
+
+        # Fall back to folder path if no title
+        folder = gallery.get('folder', {})
+        if folder:
+            folder_path = folder.get('path', '')
+            if folder_path:
+                folder_name = Path(folder_path).name
+                return f"folder:{folder_name}"
+
+        return f"ID:{gallery['id']}"
+
     def get_orphan_scenes(self) -> List[Dict]:
         """Find all scenes without galleries."""
         # Get all scenes and filter for those without galleries
@@ -177,8 +209,13 @@ class OrphanSceneProcessor:
             if galleries:
                 gallery = galleries[0]  # Use first gallery
                 gallery_folder = gallery.get('folder', {}).get('path', 'No folder assigned')
-                log.info(f"Matched scene {scene['id']} to gallery {gallery['id']} ('{gallery.get('title', 'Untitled')}') "
+
+                scene_name = self.get_scene_identifier(scene)
+                gallery_name = self.get_gallery_identifier(gallery)
+
+                log.info(f"Matched scene {scene['id']} {scene_name} to gallery {gallery['id']} {gallery_name} "
                         f"via image {first_image['id']} in same folder")
+                log.debug(f"  Scene folder: {scene_folder}")
                 log.debug(f"  Gallery folder: {gallery_folder}")
                 return gallery
             else:
@@ -212,8 +249,13 @@ class OrphanSceneProcessor:
                 if galleries:
                     gallery = galleries[0]
                     gallery_folder = gallery.get('folder', {}).get('path', 'No folder assigned')
-                    log.info(f"Matched scene {scene['id']} to gallery {gallery['id']} ('{gallery.get('title', 'Untitled')}') "
+
+                    scene_name = self.get_scene_identifier(scene)
+                    gallery_name = self.get_gallery_identifier(gallery)
+
+                    log.info(f"Matched scene {scene['id']} {scene_name} to gallery {gallery['id']} {gallery_name} "
                             f"via image {first_image['id']} in related folder: {folder_path}")
+                    log.debug(f"  Scene folder: {scene_folder}")
                     log.debug(f"  Gallery folder: {gallery_folder}")
                     return gallery
                 else:
@@ -227,10 +269,10 @@ class OrphanSceneProcessor:
         """Assign a scene to a gallery."""
         dry_run = self.settings.get('dryRun', False)
 
-        scene_title = scene.get('title', 'Untitled')
-        gallery_title = gallery.get('title', 'Untitled')
+        scene_name = self.get_scene_identifier(scene)
+        gallery_name = self.get_gallery_identifier(gallery)
 
-        log.info(f"{'[DRY RUN] ' if dry_run else ''}Assigning scene {scene['id']} ('{scene_title}') to gallery {gallery['id']} ('{gallery_title}')")
+        log.info(f"{'[DRY RUN] ' if dry_run else ''}Assigning scene {scene['id']} {scene_name} to gallery {gallery['id']} {gallery_name}")
 
         if not dry_run:
             try:
@@ -244,7 +286,9 @@ class OrphanSceneProcessor:
                 })
                 self.stats['assigned'] += 1
             except Exception as e:
-                log.error(f"Error assigning scene {scene['id']} to gallery {gallery['id']}: {str(e)}")
+                scene_name = self.get_scene_identifier(scene)
+                gallery_name = self.get_gallery_identifier(gallery)
+                log.error(f"Error assigning scene {scene['id']} {scene_name} to gallery {gallery['id']} {gallery_name}: {str(e)}")
                 self.stats['errors'] += 1
         else:
             self.stats['assigned'] += 1
@@ -258,7 +302,8 @@ class OrphanSceneProcessor:
         if matched_gallery:
             self.assign_scene_to_gallery(scene, matched_gallery)
         else:
-            log.debug(f"No matching gallery found for scene {scene['id']}")
+            scene_name = self.get_scene_identifier(scene)
+            log.debug(f"No matching gallery found for scene {scene['id']} {scene_name}")
             self.stats['skipped'] += 1
 
     def process_all(self):
