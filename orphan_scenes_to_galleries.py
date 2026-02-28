@@ -63,123 +63,142 @@ class OrphanSceneProcessor:
 
         return orphan_scenes
 
-    def get_all_galleries(self) -> List[Dict]:
-        """Fetch all galleries for matching."""
-        query = {}
-
-        # Get total count
-        total_count = self.stash.find_galleries(
-            f=query,
-            filter={"page": 0, "per_page": 0},
-            get_count=True
-        )[0]
-
-        log.info(f"Found {total_count} galleries")
-
-        # Fetch all galleries
-        galleries = []
-        page = 1
-        per_page = 100
-
-        while len(galleries) < total_count:
-            gallery_batch = self.stash.find_galleries(
-                f=query,
-                filter={"page": page, "per_page": per_page},
-                fragment='id title date folder { path } performers { id name }'
-            )
-
-            if not gallery_batch:
-                break
-
-            galleries.extend(gallery_batch)
-            page += 1
-
-        return galleries
-
-    def match_by_path(self, scene: Dict, galleries: List[Dict]) -> Optional[Dict]:
-        """Match scene to gallery by directory path."""
-        if not self.settings.get('matchByPath', True):
-            return None
-
-        scene_files = scene.get('files', [])
-        if not scene_files:
-            return None
-
-        scene_path = Path(scene_files[0]['path']).parent
-
-        for gallery in galleries:
-            folder = gallery.get('folder')
-            if folder and folder.get('path'):
-                gallery_path = Path(folder['path'])
-                if scene_path == gallery_path:
-                    log.debug(f"Matched scene {scene['id']} to gallery {gallery['id']} by path: {scene_path}")
-                    return gallery
-
-        return None
-
-    def match_by_date(self, scene: Dict, galleries: List[Dict]) -> Optional[Dict]:
-        """Match scene to gallery by date with tolerance."""
-        if not self.settings.get('matchByDate', False):
-            return None
-
-        scene_date_str = scene.get('date')
-        if not scene_date_str:
-            return None
+    def get_images_in_folder(self, folder_path: str) -> List[Dict]:
+        """Find all images in a specific folder path."""
+        query = {
+            "path": {
+                "modifier": "EQUALS",
+                "value": folder_path
+            }
+        }
 
         try:
-            scene_date = datetime.strptime(scene_date_str, '%Y-%m-%d')
-        except (ValueError, TypeError):
+            images = self.stash.find_images(
+                f=query,
+                filter={"per_page": -1},
+                fragment='id title galleries { id title folder { path } }'
+            )
+            return images if images else []
+        except Exception as e:
+            log.debug(f"Error finding images in folder {folder_path}: {str(e)}")
+            return []
+
+    def get_images_in_parent_folders(self, parent_path: str, exclude_path: str) -> Dict[str, List[Dict]]:
+        """Find all images in folders that start with parent_path prefix, excluding the original path."""
+        # Query for images where path starts with parent_path
+        query = {
+            "path": {
+                "modifier": "INCLUDES",
+                "value": parent_path
+            }
+        }
+
+        try:
+            images = self.stash.find_images(
+                f=query,
+                filter={"per_page": -1},
+                fragment='id title path galleries { id title folder { path } }'
+            )
+
+            if not images:
+                return {}
+
+            # Group images by their folder path, excluding the original folder
+            folder_images = {}
+            for image in images:
+                image_path = image.get('path', '')
+                if not image_path:
+                    continue
+
+                image_folder = str(Path(image_path).parent)
+
+                # Skip the original folder
+                if image_folder == exclude_path:
+                    continue
+
+                if image_folder not in folder_images:
+                    folder_images[image_folder] = []
+                folder_images[image_folder].append(image)
+
+            return folder_images
+        except Exception as e:
+            log.debug(f"Error finding images in parent folders: {str(e)}")
+            return {}
+
+    def match_by_folder_hierarchy(self, scene: Dict) -> Optional[Dict]:
+        """
+        Match scene to gallery using hierarchical folder-based approach:
+        1. Search for images in the same folder as the scene
+        2. If no images found, search in sibling/child folders (parent path prefix)
+        3. Return the gallery of the first image found
+        """
+        scene_files = scene.get('files', [])
+        if not scene_files:
+            log.debug(f"Scene {scene['id']} has no files")
             return None
 
-        tolerance_days = self.settings.get('dateTolerance', 1)
-        tolerance = timedelta(days=tolerance_days)
+        scene_path = scene_files[0]['path']
+        scene_folder = str(Path(scene_path).parent)
 
-        for gallery in galleries:
-            gallery_date_str = gallery.get('date')
-            if not gallery_date_str:
-                continue
+        log.debug(f"Scene {scene['id']} folder: {scene_folder}")
 
-            try:
-                gallery_date = datetime.strptime(gallery_date_str, '%Y-%m-%d')
-                if abs((scene_date - gallery_date).days) <= tolerance_days:
-                    log.debug(f"Matched scene {scene['id']} to gallery {gallery['id']} by date: {scene_date_str} ~ {gallery_date_str}")
+        # Step 1: Search for images in the same folder
+        images = self.get_images_in_folder(scene_folder)
+
+        if images:
+            log.debug(f"Found {len(images)} images in same folder: {scene_folder}")
+            # Get the first image's gallery
+            first_image = images[0]
+            galleries = first_image.get('galleries', [])
+
+            if galleries:
+                gallery = galleries[0]  # Use first gallery
+                gallery_folder = gallery.get('folder', {}).get('path', 'No folder assigned')
+                log.info(f"Matched scene {scene['id']} to gallery {gallery['id']} ('{gallery.get('title', 'Untitled')}') "
+                        f"via image {first_image['id']} in same folder")
+                log.debug(f"  Gallery folder: {gallery_folder}")
+                return gallery
+            else:
+                log.debug(f"First image {first_image['id']} has no galleries")
+        else:
+            log.debug(f"No images found in same folder: {scene_folder}")
+
+        # Step 2: Search in parent folders (sibling/child folders)
+        parent_path = str(Path(scene_folder).parent)
+
+        if not parent_path or parent_path == scene_folder:
+            log.debug(f"No valid parent path for scene {scene['id']}")
+            return None
+
+        log.debug(f"Searching for images in folders with parent path prefix: {parent_path}")
+
+        folder_images = self.get_images_in_parent_folders(parent_path, scene_folder)
+
+        if folder_images:
+            log.debug(f"Found images in {len(folder_images)} folders with parent path prefix")
+
+            # Sort folders by path for consistent ordering
+            for folder_path in sorted(folder_images.keys()):
+                images_in_folder = folder_images[folder_path]
+                log.debug(f"  {folder_path}: {len(images_in_folder)} images")
+
+                # Get first image's gallery from this folder
+                first_image = images_in_folder[0]
+                galleries = first_image.get('galleries', [])
+
+                if galleries:
+                    gallery = galleries[0]
+                    gallery_folder = gallery.get('folder', {}).get('path', 'No folder assigned')
+                    log.info(f"Matched scene {scene['id']} to gallery {gallery['id']} ('{gallery.get('title', 'Untitled')}') "
+                            f"via image {first_image['id']} in related folder: {folder_path}")
+                    log.debug(f"  Gallery folder: {gallery_folder}")
                     return gallery
-            except (ValueError, TypeError):
-                continue
+                else:
+                    log.debug(f"  First image {first_image['id']} in {folder_path} has no galleries")
+        else:
+            log.debug(f"No folders found with parent path prefix: {parent_path}")
 
         return None
-
-    def match_by_performers(self, scene: Dict, galleries: List[Dict]) -> Optional[Dict]:
-        """Match scene to gallery by shared performers."""
-        if not self.settings.get('matchByPerformers', False):
-            return None
-
-        scene_performers = scene.get('performers', [])
-        if not scene_performers:
-            return None
-
-        scene_performer_ids = {p['id'] for p in scene_performers}
-        min_matches = self.settings.get('minPerformerMatch', 1)
-
-        best_match = None
-        best_match_count = 0
-
-        for gallery in galleries:
-            gallery_performers = gallery.get('performers', [])
-            if not gallery_performers:
-                continue
-
-            gallery_performer_ids = {p['id'] for p in gallery_performers}
-            match_count = len(scene_performer_ids & gallery_performer_ids)
-
-            if match_count >= min_matches and match_count > best_match_count:
-                best_match = gallery
-                best_match_count = match_count
-
-        if best_match:
-            log.debug(f"Matched scene {scene['id']} to gallery {best_match['id']} by {best_match_count} performers")
-
-        return best_match
 
     def assign_scene_to_gallery(self, scene: Dict, gallery: Dict):
         """Assign a scene to a gallery."""
@@ -207,21 +226,10 @@ class OrphanSceneProcessor:
         else:
             self.stats['assigned'] += 1
 
-    def process_scene(self, scene: Dict, galleries: List[Dict]):
+    def process_scene(self, scene: Dict):
         """Process a single orphan scene and try to assign it to a gallery."""
-        # Try different matching strategies in order of preference
-        matched_gallery = None
-
-        # 1. Try path matching first (most reliable)
-        matched_gallery = self.match_by_path(scene, galleries)
-
-        # 2. Try performer matching if path didn't work
-        if not matched_gallery:
-            matched_gallery = self.match_by_performers(scene, galleries)
-
-        # 3. Try date matching as last resort
-        if not matched_gallery:
-            matched_gallery = self.match_by_date(scene, galleries)
+        # Use hierarchical folder-based matching
+        matched_gallery = self.match_by_folder_hierarchy(scene)
 
         # Assign if we found a match
         if matched_gallery:
@@ -242,19 +250,12 @@ class OrphanSceneProcessor:
             log.info("No orphan scenes found!")
             return
 
-        # Fetch all galleries
-        galleries = self.get_all_galleries()
-
-        if not galleries:
-            log.warning("No galleries found! Cannot assign scenes.")
-            return
-
         # Process each orphan scene
-        log.info(f"Processing {len(orphan_scenes)} orphan scenes against {len(galleries)} galleries...")
+        log.info(f"Processing {len(orphan_scenes)} orphan scenes using folder hierarchy matching...")
 
         for i, scene in enumerate(orphan_scenes):
             log.progress((i + 1) / len(orphan_scenes))
-            self.process_scene(scene, galleries)
+            self.process_scene(scene)
 
         # Print summary
         log.info("=" * 50)
@@ -279,11 +280,6 @@ def main():
 
     # Default settings
     settings = {
-        "matchByPath": True,
-        "matchByDate": False,
-        "dateTolerance": 1,
-        "matchByPerformers": False,
-        "minPerformerMatch": 1,
         "excludeOrganized": False,
         "dryRun": False
     }

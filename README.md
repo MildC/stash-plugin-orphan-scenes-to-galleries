@@ -4,15 +4,12 @@ A [Stash](https://github.com/stashapp/stash) plugin that automatically assigns o
 
 ## Features
 
-- 🔍 **Multiple Matching Strategies**:
-  - **Path Matching**: Assigns scenes to galleries in the same directory (most reliable)
-  - **Performer Matching**: Matches scenes and galleries that share performers
-  - **Date Matching**: Matches scenes and galleries with similar dates (with configurable tolerance)
+- 🔍 **Hierarchical Folder-Based Matching**:
+  - **Same Folder Search**: First searches for images in the scene's folder and uses the first image's gallery
+  - **Parent Folder Search**: If no images found, searches sibling/child folders under the same parent directory
+  - **Automatic Assignment**: Uses the gallery of the first image found in the folder hierarchy
 
 - ⚙️ **Configurable Settings**:
-  - Enable/disable each matching strategy independently
-  - Set minimum performer matches required
-  - Configure date tolerance (in days)
   - Exclude organized scenes from processing
   - Dry run mode for safe testing
 
@@ -53,26 +50,9 @@ Then reload plugins in Stash.
 
 ### Configuration
 
-Go to **Settings > Plugins > Orphan Scenes to Galleries** and configure the matching options:
+Go to **Settings > Plugins > Orphan Scenes to Galleries** and configure the options:
 
-#### Matching Options
-
-- **Match by Path** (default: enabled)
-  - Assigns scenes to galleries if they're in the same directory
-  - Most reliable matching method
-  - Example: Scene at `/videos/shoot1/scene.mp4` → Gallery at `/videos/shoot1/`
-
-- **Match by Date** (default: disabled)
-  - Matches scenes and galleries with similar dates
-  - **Date Tolerance**: Number of days difference allowed (default: 1)
-  - Example: Scene from 2024-03-15 → Gallery from 2024-03-14 (within 1 day)
-
-- **Match by Performers** (default: disabled)
-  - Matches scenes and galleries that share performers
-  - **Minimum Performer Matches**: How many shared performers required (default: 1)
-  - Example: Scene with [Performer A, Performer B] → Gallery with [Performer A, Performer C]
-
-#### Other Options
+#### Options
 
 - **Exclude Organized Scenes** (default: disabled)
   - Skip scenes marked as "organized"
@@ -99,46 +79,49 @@ Go to **Settings > Plugins > Orphan Scenes to Galleries** and configure the matc
 
 ## How It Works
 
-The plugin processes orphan scenes in the following order:
+The plugin uses a hierarchical folder-based matching approach:
 
 1. **Finds all orphan scenes** (scenes with `galleries_count = 0`)
-2. **Fetches all galleries** in your database
-3. **For each orphan scene**, tries matching strategies in priority order:
-   - First: Path matching (if enabled)
-   - Second: Performer matching (if enabled)
-   - Third: Date matching (if enabled)
-4. **Assigns the scene** to the first matching gallery found
-5. **Logs the results** with detailed statistics
+2. **For each orphan scene**:
+   - **Step 1**: Searches for images in the same folder as the scene
+     - If images are found, uses the first image's gallery
+   - **Step 2**: If no images in same folder, searches for images in related folders (sibling/child folders under the same parent)
+     - Queries images where the folder path starts with the parent path
+     - Groups images by their folder paths
+     - Uses the first image's gallery from the first matching folder
+3. **Assigns the scene** to the matched gallery
+4. **Logs the results** with detailed statistics
+
+This "nearest neighbor" approach assumes that scenes and their related image galleries are stored in the same or nearby folders in the filesystem hierarchy.
 
 ## Examples
 
-### Example 1: Simple Path Matching
+### Example 1: Same Folder Match
 
 **Setup:**
 - Scene: `/media/photoshoots/2024-03-15/video.mp4`
-- Gallery: Folder at `/media/photoshoots/2024-03-15/`
+- Images in same folder: `/media/photoshoots/2024-03-15/image1.jpg`, `image2.jpg`
+- Gallery: "March 15 Shoot" (contains the images)
 
-**Result:** Scene automatically assigned to gallery ✓
+**Result:** Scene automatically assigned to "March 15 Shoot" gallery ✓
 
-### Example 2: Performer Matching
-
-**Setup:**
-- Scene: Has performers [Alice, Bob]
-- Gallery A: Has performers [Alice]
-- Gallery B: Has performers [Alice, Bob]
-- Minimum Performer Matches: 2
-
-**Result:** Scene assigned to Gallery B (2 matches) ✓
-
-### Example 3: Date Tolerance
+### Example 2: Parent Folder Search
 
 **Setup:**
-- Scene: Date 2024-03-15
-- Gallery A: Date 2024-03-14
-- Gallery B: Date 2024-03-10
-- Date Tolerance: 1 day
+- Scene: `/media/shoots/session1/scene.mp4` (no images in this folder)
+- Images in sibling folder: `/media/shoots/session1-pics/image1.jpg`, `image2.jpg`
+- Gallery: "Session 1 Photos" (contains the images)
 
-**Result:** Scene assigned to Gallery A (within tolerance) ✓
+**Result:** Scene assigned to "Session 1 Photos" gallery via parent folder search ✓
+
+### Example 3: Multi-Level Hierarchy
+
+**Setup:**
+- Scene: `/media/studio/2024/march/scene.mp4` (no images here)
+- Images in related folder: `/media/studio/2024/march/gallery/image1.jpg`
+- Gallery: "March Gallery" (contains the images)
+
+**Result:** Scene assigned to "March Gallery" via hierarchical search ✓
 
 ## Troubleshooting
 
@@ -157,10 +140,10 @@ The plugin processes orphan scenes in the following order:
 ### Scenes not being assigned
 
 - Enable **Dry Run** and check the logs to see why matches aren't found
-- Try enabling different matching strategies
-- For path matching: ensure scene and gallery paths actually match
-- For performer matching: verify scenes and galleries share performers
-- For date matching: increase the date tolerance
+- Verify that images exist in the same folder or nearby folders as the scene
+- Ensure images are properly assigned to galleries in Stash
+- Check that the scene file path is correct and accessible
+- Review the folder structure - scenes and galleries should be in related folders
 
 ### Permission errors
 
@@ -222,6 +205,13 @@ MIT License - see LICENSE file for details
 - Inspired by other community plugins in [CommunityScripts](https://github.com/stashapp/CommunityScripts)
 
 ## Changelog
+
+### v1.1.0 (2026-02-27)
+- Replaced multiple matching strategies with hierarchical folder-based matching
+- Same folder search for images
+- Parent folder search for related images
+- More efficient: queries images on-demand instead of loading all galleries
+- Better performance for large libraries
 
 ### v1.0.0 (2026-02-27)
 - Initial release

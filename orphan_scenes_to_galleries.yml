@@ -1,6 +1,6 @@
 name: Orphan Scenes to Galleries
-description: Assigns orphan scenes (scenes without galleries) to matching galleries based on file path, date, or performer matching.
-version: 1.0.0
+description: Assigns orphan scenes (scenes without galleries) to matching galleries using hierarchical folder-based image search.
+version: 1.1.0
 url: https://github.com/yourusername/stash-plugin-orphan-scenes-to-galleries
 exec:
   - python
@@ -8,26 +8,6 @@ exec:
 interface: raw
 
 settings:
-  matchByPath:
-    displayName: Match by Path
-    description: Assign scenes to galleries if they share the same directory path
-    type: BOOLEAN
-  matchByDate:
-    displayName: Match by Date
-    description: Assign scenes to galleries if they have matching dates (within the date tolerance)
-    type: BOOLEAN
-  dateTolerance:
-    displayName: Date Tolerance (days)
-    description: Number of days tolerance when matching by date (default is 1)
-    type: NUMBER
-  matchByPerformers:
-    displayName: Match by Performers
-    description: Assign scenes to galleries if they share performers
-    type: BOOLEAN
-  minPerformerMatch:
-    displayName: Minimum Performer Matches
-    description: Minimum number of matching performers required (default is 1)
-    type: NUMBER
   excludeOrganized:
     displayName: Exclude Organized Scenes
     description: Do not process scenes that are marked as organized
@@ -39,6 +19,6 @@ settings:
 
 tasks:
   - name: "Assign Orphan Scenes to Galleries"
-    description: Loops through all orphan scenes and attempts to assign them to matching galleries based on the configured matching criteria.
+    description: Loops through all orphan scenes and attempts to assign them to matching galleries by searching for images in the same or nearby folders.
     defaultArgs:
       mode: processAll

@@ -13,6 +13,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Batch processing with configurable batch size
 - Export/import of match rules
 - Duplicate detection and handling
+- Configurable search depth for parent folder hierarchy
+
+## [1.1.0] - 2026-02-27
+
+### Changed
+- **BREAKING**: Replaced multiple matching strategies with hierarchical folder-based matching
+- More efficient image queries (on-demand instead of loading all galleries)
+- Better performance for large libraries
+
+### Added
+- Same folder search: finds images in the scene's folder
+- Parent folder search: finds images in sibling/child folders
+- Detailed logging showing which images are used for matching
+- Folder path information in match logs
+
+### Removed
+- Path-based matching (replaced by folder hierarchy search)
+- Performer-based matching (removed)
+- Date-based matching with tolerance (removed)
+- Related configuration options: `matchByPath`, `matchByDate`, `dateTolerance`, `matchByPerformers`, `minPerformerMatch`
 
 ## [1.0.0] - 2026-02-27
 
@@ -38,5 +58,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Detailed logging**: See exactly what the plugin is doing
 - **Statistics**: Summary of orphan scenes, assignments, and skips
 
-[Unreleased]: https://github.com/yourusername/stash-plugin-orphan-scenes-to-galleries/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/yourusername/stash-plugin-orphan-scenes-to-galleries/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/yourusername/stash-plugin-orphan-scenes-to-galleries/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/yourusername/stash-plugin-orphan-scenes-to-galleries/releases/tag/v1.0.0

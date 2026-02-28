@@ -72,10 +72,7 @@ pip install stashapp-tools
 
 1. Go to **Settings > Plugins > Orphan Scenes to Galleries**
 2. **IMPORTANT**: Enable **Dry Run** for initial testing
-3. Configure matching options:
-   - Enable "Match by Path" (recommended)
-   - Optionally enable other matching methods
-4. Save settings
+3. Save settings
 
 ### 5. Run the Task
 
@@ -89,8 +86,8 @@ pip install stashapp-tools
 
 Check the logs for:
 - Number of orphan scenes found
-- Number of galleries available
-- Matches found (scene → gallery)
+- Matched scenes and their galleries
+- Which images were used for matching
 - Summary statistics
 
 ### 7. Actual Run
@@ -130,9 +127,9 @@ Logs are available at:
    - Check Python version (3.7+ required)
 
 3. **No matches found**
-   - Verify matching criteria are enabled
-   - Check that scenes and galleries actually have matching attributes
-   - Review dry run logs to see what's being compared
+   - Check that images exist in same or nearby folders as scenes
+   - Verify images are properly assigned to galleries
+   - Review dry run logs to see what's being searched
 
 ## Unit Testing (Advanced)
 
@@ -147,24 +144,28 @@ class TestOrphanSceneProcessor(unittest.TestCase):
     def setUp(self):
         self.mock_stash = Mock()
         self.settings = {
-            'matchByPath': True,
-            'matchByDate': False,
-            'matchByPerformers': False,
+            'excludeOrganized': False,
             'dryRun': True
         }
         self.processor = OrphanSceneProcessor(self.mock_stash, self.settings)
 
-    def test_match_by_path(self):
+    def test_match_by_folder_hierarchy(self):
         scene = {
             'id': '1',
             'files': [{'path': '/videos/shoot1/scene.mp4'}]
         }
-        galleries = [
-            {'id': 'g1', 'folder': {'path': '/videos/shoot1'}},
-            {'id': 'g2', 'folder': {'path': '/videos/shoot2'}}
+
+        # Mock the image query to return images with galleries
+        self.mock_stash.find_images.return_value = [
+            {
+                'id': 'img1',
+                'galleries': [
+                    {'id': 'g1', 'title': 'Gallery 1', 'folder': {'path': '/videos/shoot1'}}
+                ]
+            }
         ]
 
-        result = self.processor.match_by_path(scene, galleries)
+        result = self.processor.match_by_folder_hierarchy(scene)
         self.assertIsNotNone(result)
         self.assertEqual(result['id'], 'g1')
 

@@ -52,11 +52,7 @@ Copy-Item -Recurse . "$env:USERPROFILE\.stash\plugins\orphan-scenes-to-galleries
 2. Find **"Orphan Scenes to Galleries"**
 3. Click to expand settings
 4. **IMPORTANT: Enable "Dry Run"** for your first test!
-5. Configure matching options:
-   - ✅ **Match by Path** (recommended - enabled by default)
-   - ⬜ **Match by Date** (optional)
-   - ⬜ **Match by Performers** (optional)
-6. Click **Save**
+5. Click **Save**
 
 ### Run the Task
 
@@ -82,8 +78,8 @@ After a successful run (with Dry Run disabled), you should see:
 ```
 Starting orphan scene processing...
 Found 42 orphan scenes
-Found 15 galleries
-Processing 42 orphan scenes against 15 galleries...
+Processing 42 orphan scenes using folder hierarchy matching...
+Matched scene 123 to gallery 456 ('My Gallery') via image 789 in same folder
 Assigning scene 123 ('My Scene') to gallery 456 ('My Gallery')
 ...
 ==================================================
@@ -110,9 +106,10 @@ This means all your scenes already have galleries! That's actually good news �
 ### Scenes not being assigned
 
 - Make sure **Dry Run is disabled** to actually perform assignments
-- Check that matching criteria are enabled (at least one must be on)
+- Check that images exist in the same or nearby folders as your scenes
+- Verify images are properly assigned to galleries
 - Review logs to understand why matches aren't found
-- For path matching: scene and gallery must be in the exact same folder
+- Ensure scene and gallery folders are in related directories
 
 ### Import errors
 
