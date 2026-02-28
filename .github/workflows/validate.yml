@@ -1,0 +1,62 @@
+name: Plugin Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyyaml
+        pip install -r requirements.txt
+
+    - name: Run validation script
+      run: |
+        python validate.py
+
+    - name: Check Python syntax
+      run: |
+        python -m py_compile orphan_scenes_to_galleries.py
+
+    - name: Check YAML syntax
+      run: |
+        python -c "import yaml; yaml.safe_load(open('orphan_scenes_to_galleries.yml'))"
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8
+
+    - name: Lint with flake8
+      run: |
+        # Stop on syntax errors or undefined names
+        flake8 orphan_scenes_to_galleries.py --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit with warning on other issues (don't fail the build)
+        flake8 orphan_scenes_to_galleries.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
