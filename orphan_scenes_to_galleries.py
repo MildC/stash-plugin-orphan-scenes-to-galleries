@@ -65,9 +65,11 @@ class OrphanSceneProcessor:
 
     def get_images_in_folder(self, folder_path: str) -> List[Dict]:
         """Find all images in a specific folder path."""
+        # Query for images where the path starts with the folder path
+        # Use INCLUDES modifier to find images whose path contains the folder
         query = {
             "path": {
-                "modifier": "EQUALS",
+                "modifier": "INCLUDES",
                 "value": folder_path
             }
         }
@@ -76,9 +78,22 @@ class OrphanSceneProcessor:
             images = self.stash.find_images(
                 f=query,
                 filter={"per_page": -1},
-                fragment='id title galleries { id title folder { path } }'
+                fragment='id title path galleries { id title folder { path } }'
             )
-            return images if images else []
+
+            if not images:
+                return []
+
+            # Filter to only images actually in this specific folder (not subfolders)
+            folder_images = []
+            for image in images:
+                image_path = image.get('path', '')
+                if image_path:
+                    image_folder = str(Path(image_path).parent)
+                    if image_folder == folder_path:
+                        folder_images.append(image)
+
+            return folder_images
         except Exception as e:
             log.debug(f"Error finding images in folder {folder_path}: {str(e)}")
             return []
